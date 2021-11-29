@@ -4,11 +4,6 @@
   "description": "pm3 project",
   "author": "",
   "license": "ISC",
-
-  "engines": {
-    "node": "8.12.0"
-  },
-
   "scripts": {
     "start": "node ./backend/server.js"
   }
