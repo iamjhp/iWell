@@ -1,5 +1,9 @@
 const markers = []
 let activeInfoWindow = null;
+var directionsRenderer
+var directionsService
+var polyline
+var polyline2
 
 /**
  * @class MapView
@@ -42,12 +46,28 @@ export default class MapView {
             let well = wells[i];
             let marker = this.#createWellMarker(well, map, i)
             markers.push(marker);
-            this.#addInfoWindowOnClick(marker, map, i, well);
+            this.#addInfoWindowOnClick(marker, map, i, well, userPosition);
         }
 
         new markerClusterer.MarkerClusterer({map, markers})
 
         this.addLocationButton(map, closestMarkerId, userPosition);
+        
+        
+            
+    }
+
+    calculateAndDisplayDistance(userPosition, targetPosition) {
+        var service = new google.maps.DistanceMatrixService();
+        var from = new google.maps.LatLng(userPosition.lat, userPosition.lng);
+        var dest = new google.maps.LatLng(targetPosition.lat, targetPosition.lng);
+        
+        service.getDistanceMatrix(
+            {
+                origins: [from],
+                destinations: [dest],
+                travelMode: 'WALKING'
+            }, callback);
     }
 
     /**
@@ -64,19 +84,6 @@ export default class MapView {
         //google.maps.event.trigger(closestMarker, 'click');
         return closestMarkerCoor;
     }
-
-    addLocationButton(map, closestMarkerId, userPosition) {
-        document.getElementById("button").addEventListener("click", () => {
-            google.maps.event.trigger(map, 'click');
-            let rendererOptions = this.createRendererOptions();
-            const directionsRenderer = new google.maps.DirectionsRenderer(rendererOptions);
-            const directionsService = new google.maps.DirectionsService();
-            directionsRenderer.setMap(map);
-            let targetPosition = this.showClosestWellInfo(closestMarkerId)
-            this.calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map); 
-        });
-    }
-
 
     getMarkers() {
         return markers;
@@ -103,17 +110,56 @@ export default class MapView {
         });
     }
 
-    #addInfoWindowOnClick(marker, map, i, well) {
+    #addInfoWindowOnClick(marker, map, i, well, userPosition) {
         const infowindow = new google.maps.InfoWindow({
             content: this.#createWellInfo(well),
         });
+        google.maps.event.addListener(marker, 'click', () => {
+            activeInfoWindow&&activeInfoWindow.close();
+            infowindow.open(map, marker);
+            activeInfoWindow = infowindow;
+            google.maps.event.addListener(infowindow, 'domready', () => {
+                document.getElementById("route").addEventListener("click", () => {
+                    let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()}
+                    this.setUpRoute(map, targetPosition, userPosition)
+                    this.calculateAndDisplayDistance(userPosition, targetPosition)
+                }); 
+            })     
+        })
+        /*
         google.maps.event.addListener(marker, 'click', (function (marker) {
             return function () {
                 activeInfoWindow&&activeInfoWindow.close();
                 infowindow.open(map, marker);
                 activeInfoWindow = infowindow;
+                let test = this.test()
             }
-        })(marker, i));
+        })(marker, i)); */
+    }
+
+    addLocationButton(map, closestMarkerId, userPosition) {
+        document.getElementById("closestMarker").addEventListener("click", () => {
+            google.maps.event.trigger(map, 'click');
+            let targetPosition = this.showClosestWellInfo(closestMarkerId)
+            this.setUpRoute(map, targetPosition, userPosition)
+            this.calculateAndDisplayDistance(userPosition, targetPosition)
+        });
+    }
+
+    setUpRoute(map, targetPosition, userPosition) {
+        if(directionsRenderer != null) {
+            directionsRenderer.setMap(null);
+            directionsRenderer = null;
+            polyline.setMap(null)
+            polyline2.setMap(null)
+        }
+        let rendererOptions = this.createRendererOptions();
+            directionsRenderer = new google.maps.DirectionsRenderer(rendererOptions);
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer.setMap(null);
+            directionsRenderer.setMap(map);
+            //let targetPosition = this.showClosestWellInfo(closestMarkerId)
+            this.calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map);
     }
 
     #createWellInfo(well) {
@@ -131,8 +177,14 @@ export default class MapView {
             "<br>" +
             "</p>" +
             "</div>" +
-            "</div>";
+            "</div>"+
+            "<button id='route'>Route</button>";
         return wellInfo;
+    }
+
+    test() {
+        console.log("heelllllllllllllllllor")
+        alert('Hello')
     }
 
     createRendererOptions() {
@@ -169,7 +221,7 @@ export default class MapView {
             travelMode: google.maps.TravelMode.WALKING
           })
           .then((response) => {
-            var polyline = new google.maps.Polyline({
+            polyline = new google.maps.Polyline({
                 map: map,
                 strokeColor: "red",
                 strokeOpacity: 0,
@@ -190,7 +242,7 @@ export default class MapView {
                         ]
                 
             });
-            var polyline2 = new google.maps.Polyline({
+            polyline2 = new google.maps.Polyline({
                 map: map,
                 strokeColor: "red",
                 strokeOpacity: 0,
@@ -215,4 +267,35 @@ export default class MapView {
           })
           .catch((e) => window.alert("Directions request failed due to " + status));
       }
+}
+
+function callback(response, status) {
+    if (status == 'OK') {
+        //var origins = response.originAddresses;
+        //var destinations = response.destinationAddresses;
+        var results = response.rows[0].elements;
+        document.getElementById("distance").textContent = "Entfernung: " + results[0].distance.text;
+        document.getElementById("duration").textContent = "Dauer: " + results[0].duration.text;
+        /*
+        for (var i = 0; i < origins.length; i++) {
+            var results = response.rows[i].elements;
+            console.log(results[i].distance.text)
+            console.log(results[i].duration.text)
+            document.getElementById("distance").textContent = "Entfernung: " + results[i].distance.text;
+            document.getElementById("duration").textContent = "Dauer: " + results[i].duration.text;
+            
+            for (var j = 0; j < results.length; j++) {
+                var element = results[j];
+                var distance = element.distance.text;
+                var duration = element.duration.text;
+                var from = origins[i];
+                var to = destinations[j];
+            }
+            */
+        
+    }
+}
+
+function test2() {
+    alert("hello")
 }

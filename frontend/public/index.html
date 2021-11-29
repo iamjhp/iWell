@@ -12,9 +12,26 @@
         <title>iWell</title>
     </head>
     <body>
-        <header><img src="pictures/iWellLogoRound.png" alt="iWell-logo" width="160" height="160"></header>
-        <button type="button" id="button">test button</button>
-        <div id="map">
+        <div class="header">
+            <ul class="header-leftside">
+                <li><img src="pictures/iWellLogoRound.png" alt="iWell-logo" width="60" height="60"></li>
+                <li><h1>iWell</h1></li>
+            </ul>
+        </div>
+        <div class="content">
+            <div class="content-left" id="map">
+            </div>
+            <div class="content-right">
+                <div class="right1">
+                    <button id="closestMarker">I am thirsty</button>
+                </div>
+                <div class="right2">
+                    <div id="distance"></div>
+                    <div id="duration"></div>    
+                </div>
+            </div>
+        </div>
+        <div class="footer">
         </div>
         <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAuu6Xb4hfSO5U9PKD9U7JqZfLBPJTvjc&v=3&libraries=geometry" async></script>
         <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
