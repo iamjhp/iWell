@@ -10,6 +10,6 @@
   },
 
   "scripts": {
-    "start": "serve -s build"
+    "start": "node ./backend/server.js"
   }
 }
