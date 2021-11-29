@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "pm3 project",
   "main": "/backend/server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "",
   "license": "ISC",
 
