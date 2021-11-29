@@ -2,7 +2,6 @@
   "name": "iwell",
   "version": "1.0.0",
   "description": "pm3 project",
-  "main": "/backend/server.js",
   "author": "",
   "license": "ISC",
 
