@@ -9,6 +9,7 @@ var directionsRenderer = null;
 var directionsService
 var polyline = null
 var polyline2 = null
+var line = []
 var myStyles =[
     {
         featureType: "poi",
@@ -106,6 +107,7 @@ export default class MapView {
             activeInfoWindow = infowindow;
             google.maps.event.addListener(infowindow, 'domready', () => {
                 document.getElementById("route").addEventListener("click", () => {
+                    activeInfoWindow&&activeInfoWindow.close();
                     clearInterval(intervalId);
                     let modelTest = new Model()
                     modelTest.getUserLocation().then(newUserPosition => { 
@@ -173,8 +175,12 @@ export default class MapView {
         if(directionsRenderer != null) {
             directionsRenderer.setMap(null);
             directionsRenderer = null;
-            polyline.setMap(null);
-            polyline2.setMap(null);
+            var size = line.length;
+
+            for (let i=0; i<size; i++) 
+            {                           
+                line[i].setMap(null);
+            }
         }
 
         let rendererOptions = RendererOption();
@@ -214,6 +220,7 @@ export default class MapView {
                         ]
                 
             });
+            line.push(polyline)
             polyline2 = new google.maps.Polyline({
                 map: map,
                 strokeColor: "red",
@@ -235,6 +242,7 @@ export default class MapView {
                         ]
                 
             });
+            line.push(polyline2)
             directionsRenderer.setDirections(response);
           })
           .catch(() => window.alert("Directions request failed due to " + status));
