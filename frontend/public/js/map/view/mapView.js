@@ -1,10 +1,27 @@
+import RendererOption from '../config/rendererOption.js';
+import WellInfoView from './wellInfoView.js';
+import MarkerView from './markerView.js';
+import Model from '../model/mapModel.js';
+
 const markers = []
 let activeInfoWindow = null;
-var directionsRenderer
+var directionsRenderer = null;
 var directionsService
-var polyline
-var polyline2
+var polyline = null
+var polyline2 = null
+var myStyles =[
+    {
+        featureType: "poi",
+        elementType: "labels",
+        stylers: [
+              { visibility: "off" }
+        ]
+    }
+];
 
+var intervalId = null;
+var markerView = null;
+var pMarker = null;
 /**
  * @class MapView
  * View for the iWell Application.
@@ -15,11 +32,9 @@ export default class MapView {
      * Initializes a new instance of the MapView.
      */
     constructor() {
-        this.blueMarker = "../../pictures/BlueMarker_24.png"
-        this.wellImage = "../../pictures/well_marker.png"
         this.find_closest_Well = null;
     }
-
+    
     /**
      * Initializes the Map, fills it with Markers pointing to the given wells and adds a marker pointing to the given
      * user location. Also adds a listener to the well markers so as to open an information window when the
@@ -31,30 +46,39 @@ export default class MapView {
     initMap(wells, userPosition, closestMarkerId) {
         let mapOptions = {
             zoom: 16,
-            center: userPosition
+            center: userPosition,
+            styles: myStyles 
         };
 
         let map = new google.maps.Map(document.getElementById('map'),
             mapOptions);
-
-        //google.maps.event.addListener(map, 'click', this.find_closest_Well);
-        
-        this.#createPersonMarker(userPosition, map)
-        
+     markerView = new MarkerView(map);
         // add well markers and listeners to open info windows
         for (let i = 0; i < wells.length; i++) {
             let well = wells[i];
-            let marker = this.#createWellMarker(well, map, i)
+            let marker = markerView.createWellMarker(well, i)
             markers.push(marker);
-            this.#addInfoWindowOnClick(marker, map, i, well, userPosition);
+            this.#addInfoWindowOnClick(marker, map, i, well, null);
         }
-
         new markerClusterer.MarkerClusterer({map, markers})
 
-        this.addLocationButton(map, closestMarkerId, userPosition);
-        
-        
-            
+
+        //markerView = new MarkerView(map);
+        pMarker = markerView.createPersonMarker(userPosition)
+        this.addLocationButton(map, closestMarkerId);
+
+        intervalId = setInterval(() => {
+            this.updateUserPosition(markerView)
+        }, 9000)
+    }
+
+    updateUserPosition(markerView) {
+        let modelTest = new Model()
+        modelTest.getUserLocation().then(newUserPosition => { 
+            pMarker.setMap(null)
+            pMarker = markerView.createPersonMarker(newUserPosition)
+            //this.addLocationButton(map, closestMarkerId, newUserPosition);
+        })
     }
 
     calculateAndDisplayDistance(userPosition, targetPosition) {
@@ -70,49 +94,11 @@ export default class MapView {
             }, callback);
     }
 
-    /**
-     * Shows the closest well in accordance with the user location.
-     * @param closestId
-     */
-    showClosestWellInfo(closestId) {
-        let idx4ClosestMarker
-        for (let i = 0; i < markers.length; i++) {
-            if (markers[i].wellId == closestId) idx4ClosestMarker = markers[i].arrNr
-        }
-        let closestMarker = markers[idx4ClosestMarker]
-        var closestMarkerCoor = {lat: closestMarker.position.lat(), lng: closestMarker.position.lng()} 
-        //google.maps.event.trigger(closestMarker, 'click');
-        return closestMarkerCoor;
-    }
-
-    getMarkers() {
-        return markers;
-    }
-
-    #createPersonMarker(userPosition, map) {
-        let test = new google.maps.Marker({
-            title: 'you',
-            position: new google.maps.LatLng(userPosition),
-            map: map,
-            icon: this.blueMarker,
-        })
-        //console.log("PersonMarker: " + test.position)
-    }
-
-    #createWellMarker(well, map, i) {
-        return new google.maps.Marker({
-            title: well.nummer,
-            position: new google.maps.LatLng(well.latitude, well.longitude),
-            wellId : well.id,
-            arrNr : i,
-            map: map,
-            icon: this.wellImage,
-        });
-    }
-
     #addInfoWindowOnClick(marker, map, i, well, userPosition) {
+        let wellInfoView = new WellInfoView(well)
+        //test.createWellInfo()
         const infowindow = new google.maps.InfoWindow({
-            content: this.#createWellInfo(well),
+            content: wellInfoView.createWellInfo(),
         });
         google.maps.event.addListener(marker, 'click', () => {
             activeInfoWindow&&activeInfoWindow.close();
@@ -120,97 +106,83 @@ export default class MapView {
             activeInfoWindow = infowindow;
             google.maps.event.addListener(infowindow, 'domready', () => {
                 document.getElementById("route").addEventListener("click", () => {
-                    let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()}
-                    this.setUpRoute(map, targetPosition, userPosition)
-                    this.calculateAndDisplayDistance(userPosition, targetPosition)
+                    clearInterval(intervalId);
+                    let modelTest = new Model()
+                    modelTest.getUserLocation().then(newUserPosition => { 
+                        let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()}
+                        this.test1(map, newUserPosition, targetPosition)
+                    })
+
+                    intervalId = setInterval(() => {
+                        modelTest.getUserLocation().then(newUserPosition => {
+                        let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()} 
+                        this.test1(map, newUserPosition, targetPosition)
+                        })
+                    }, 9000)
                 }); 
             })     
         })
-        /*
-        google.maps.event.addListener(marker, 'click', (function (marker) {
-            return function () {
-                activeInfoWindow&&activeInfoWindow.close();
-                infowindow.open(map, marker);
-                activeInfoWindow = infowindow;
-                let test = this.test()
-            }
-        })(marker, i)); */
     }
 
-    addLocationButton(map, closestMarkerId, userPosition) {
+    addLocationButton(map, closestMarkerId) {
         document.getElementById("closestMarker").addEventListener("click", () => {
             google.maps.event.trigger(map, 'click');
-            let targetPosition = this.showClosestWellInfo(closestMarkerId)
-            this.setUpRoute(map, targetPosition, userPosition)
-            this.calculateAndDisplayDistance(userPosition, targetPosition)
+            let modelTest = new Model()
+            let wellInfoView = new WellInfoView()
+            //this.test2(map, closestMarkerId, userPosition)
+            clearInterval(intervalId);
+            modelTest.getUserLocation().then(newUserPosition => {
+                let targetPosition = wellInfoView.showClosestWellInfo(closestMarkerId, markers) 
+                this.test1(map, newUserPosition, targetPosition)
+            })
+            //this.test1(map, closestMarkerId, userPosition)
+            //setInterval(this.test2(map, closestMarkerId, userPosition), 8000)
+            intervalId = setInterval(() => {
+                modelTest.getUserLocation().then(newUserPosition => {
+                    modelTest.getClosestWell().then(closestId => {
+                    let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
+                    this.test1(map, newUserPosition, targetPosition)
+                    })
+                })
+            }, 9000)
         });
+    }
+
+    // User Start Position
+    test1(map, userPosition, targetPosition) {
+        pMarker.setMap(null)
+        pMarker = markerView.createPersonMarker(userPosition)
+        this.setUpRoute(map, targetPosition, userPosition)
+        this.calculateAndDisplayDistance(userPosition, targetPosition)
+    }
+
+    // User New Position (fixed coord), , only for testing
+    test2(map, closestMarkerId) {
+        let modelTest = new Model()
+        modelTest.getUserLocation().then(newUserPosition => { 
+        let wellInfoView = new WellInfoView()
+        let targetPosition = wellInfoView.showClosestWellInfo(closestMarkerId, markers)
+        pMarker.setMap(null)
+        pMarker = markerView.createPersonMarker({lat: 47.3776, lng: 8.5428})
+        this.setUpRoute(map, targetPosition, {lat: 47.3776, lng: 8.5428})
+        this.calculateAndDisplayDistance({lat: 47.3776, lng: 8.5428}, targetPosition)
+    })
     }
 
     setUpRoute(map, targetPosition, userPosition) {
         if(directionsRenderer != null) {
             directionsRenderer.setMap(null);
             directionsRenderer = null;
-            polyline.setMap(null)
-            polyline2.setMap(null)
+            polyline.setMap(null);
+            polyline2.setMap(null);
         }
-        let rendererOptions = this.createRendererOptions();
-            directionsRenderer = new google.maps.DirectionsRenderer(rendererOptions);
-            directionsService = new google.maps.DirectionsService();
-            directionsRenderer.setMap(null);
-            directionsRenderer.setMap(map);
-            //let targetPosition = this.showClosestWellInfo(closestMarkerId)
-            this.calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map);
-    }
 
-    #createWellInfo(well) {
-        let wellInfo = '<div id="well_info">' +
-            '<h1 id="firstHeading" class="firstHeading">' + well.brunnen_art +'<br>(' +
-            well.longitude + ', ' + well.latitude + ')' + '</h1>';
-        if (well.bezeichnung !== 'null') {
-            wellInfo += '<h2>' + well.bezeichnung + '</h2>';
-        }
-        wellInfo += '<img src="pictures\\outline_water_drop_black_24dp.png" alt="Brunnen" align="left">' +
-            "<div>" +
-            '<p style="margin-left: 60px;"><b>Trinkbar:</b> Ja' +
-            "<br><br>" +
-            "<b>Wasserqualität:</b> Sehr gut" +
-            "<br>" +
-            "</p>" +
-            "</div>" +
-            "</div>"+
-            "<button id='route'>Route</button>";
-        return wellInfo;
-    }
-
-    test() {
-        console.log("heelllllllllllllllllor")
-        alert('Hello')
-    }
-
-    createRendererOptions() {
-        let rendererOptions = {
-            //preserveViewport: true,
-            //map: map,
-            suppressMarkers: true,
-            polylineOptions: {
-                strokeColor: "red",
-                strokeWeight: 4,
-                strokeOpacity: 0,
-                icons: [{
-                    icon: {
-                      path: google.maps.SymbolPath.CIRCLE,
-                      fillColor: '#C83939',
-                      fillOpacity: 1,
-                      scale: 2,
-                      strokeColor: '#C83939',
-                      strokeOpacity: 1,
-                    },
-                    offset: '0',
-                    repeat: '10px'
-                  }]
-              }
-        }
-        return rendererOptions;
+        let rendererOptions = RendererOption();
+        directionsRenderer = new google.maps.DirectionsRenderer(rendererOptions);
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer.setMap(null);
+        directionsRenderer.setMap(map);
+        this.calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map);
     }
 
     calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map) {
@@ -265,37 +237,14 @@ export default class MapView {
             });
             directionsRenderer.setDirections(response);
           })
-          .catch((e) => window.alert("Directions request failed due to " + status));
+          .catch(() => window.alert("Directions request failed due to " + status));
       }
 }
 
 function callback(response, status) {
-    if (status == 'OK') {
-        //var origins = response.originAddresses;
-        //var destinations = response.destinationAddresses;
+    if (status === 'OK') {
         var results = response.rows[0].elements;
         document.getElementById("distance").textContent = "Entfernung: " + results[0].distance.text;
         document.getElementById("duration").textContent = "Dauer: " + results[0].duration.text;
-        /*
-        for (var i = 0; i < origins.length; i++) {
-            var results = response.rows[i].elements;
-            console.log(results[i].distance.text)
-            console.log(results[i].duration.text)
-            document.getElementById("distance").textContent = "Entfernung: " + results[i].distance.text;
-            document.getElementById("duration").textContent = "Dauer: " + results[i].duration.text;
-            
-            for (var j = 0; j < results.length; j++) {
-                var element = results[j];
-                var distance = element.distance.text;
-                var duration = element.duration.text;
-                var from = origins[i];
-                var to = destinations[j];
-            }
-            */
-        
     }
-}
-
-function test2() {
-    alert("hello")
 }
