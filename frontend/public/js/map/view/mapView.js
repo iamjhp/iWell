@@ -110,9 +110,9 @@ export default class MapView {
                     activeInfoWindow&&activeInfoWindow.close();
                     clearInterval(intervalId);
                     let modelTest = new Model()
-                    modelTest.getUserLocation().then(newUserPosition => { 
+                    modelTest.getUserLocation().then(userPosition => { 
                         let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()}
-                        this.test1(map, newUserPosition, targetPosition)
+                        this.test1(map, userPosition, targetPosition)
                     })
 
                     intervalId = setInterval(() => {
@@ -133,17 +133,20 @@ export default class MapView {
             let wellInfoView = new WellInfoView()
             //this.test2(map, closestMarkerId, userPosition)
             clearInterval(intervalId);
-            modelTest.getUserLocation().then(newUserPosition => {
-                modelTest.getClosestWell().then(closestId => {
+            modelTest.getClosestWell().then(closestId => {
+                modelTest.getUserLocation().then(userPosition => {
                     let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
-                    this.test1(map, newUserPosition, targetPosition)
-
-                    intervalId = setInterval(() => {
+                    this.test1(map, userPosition, targetPosition)
+                })
+                
+                intervalId = setInterval(() => {
+                    modelTest.getUserLocation().then(newUserPosition => {
                         let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
                         this.test1(map, newUserPosition, targetPosition)
-                    }, 9000)
-                })
-            });
+                    })
+                }, 9000)
+
+            })
         })
     }
 
