@@ -33,9 +33,6 @@ app.model.getWells()
   .then(wells => {
     app.model.getUserLocation()
       .then(userPosition => {
-        app.model.getClosestWell()
-          .then(closestMarkerId => {
-            app.view.initMap(wells, userPosition, closestMarkerId);
-          })
+        app.view.initMap(wells, userPosition);
   });
 })

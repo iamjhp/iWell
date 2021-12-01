@@ -44,7 +44,7 @@ export default class MapView {
      * @param wells wells which should be marked on the map
      * @param userPosition current location of the user
      */
-    initMap(wells, userPosition, closestMarkerId) {
+    initMap(wells, userPosition) {
         let mapOptions = {
             zoom: 16,
             center: userPosition,
@@ -66,7 +66,7 @@ export default class MapView {
 
         //markerView = new MarkerView(map);
         pMarker = markerView.createPersonMarker(userPosition)
-        this.addLocationButton(map, closestMarkerId);
+        this.addLocationButton(map);
 
         intervalId = setInterval(() => {
             this.updateUserPosition(markerView)
@@ -126,7 +126,7 @@ export default class MapView {
         })
     }
 
-    addLocationButton(map, closestMarkerId) {
+    addLocationButton(map) {
         document.getElementById("closestMarker").addEventListener("click", () => {
             google.maps.event.trigger(map, 'click');
             let modelTest = new Model()
@@ -134,20 +134,17 @@ export default class MapView {
             //this.test2(map, closestMarkerId, userPosition)
             clearInterval(intervalId);
             modelTest.getUserLocation().then(newUserPosition => {
-                let targetPosition = wellInfoView.showClosestWellInfo(closestMarkerId, markers) 
-                this.test1(map, newUserPosition, targetPosition)
-            })
-            //this.test1(map, closestMarkerId, userPosition)
-            //setInterval(this.test2(map, closestMarkerId, userPosition), 8000)
-            intervalId = setInterval(() => {
-                modelTest.getUserLocation().then(newUserPosition => {
-                    modelTest.getClosestWell().then(closestId => {
+                modelTest.getClosestWell().then(closestId => {
                     let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
                     this.test1(map, newUserPosition, targetPosition)
-                    })
+
+                    intervalId = setInterval(() => {
+                        let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
+                        this.test1(map, newUserPosition, targetPosition)
+                    }, 9000)
                 })
-            }, 9000)
-        });
+            });
+        })
     }
 
     // User Start Position
