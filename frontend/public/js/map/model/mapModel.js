@@ -1,5 +1,4 @@
 const zhawCoordinates = {lat: 47.3776, lng: 8.5328}
-//const zhawCoordinates = {lat: 47.3876, lng: 8.7428}
 
 /**
  * Gets the well entries from the MySQL database.
@@ -15,9 +14,7 @@ const zhawCoordinates = {lat: 47.3776, lng: 8.5328}
     const json = await response.json();
     return json;
 }
-//const wellDB = await getWellsFromDB();
-var latTest
-var lngTest
+
 /**
  * @class MapModel
  * Model of the iWell application.

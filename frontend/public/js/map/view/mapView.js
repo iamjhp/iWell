@@ -1,28 +1,21 @@
 import RendererOption from '../config/rendererOption.js';
+import MapOption from '../config/mapOption.js'
 import WellInfoView from './wellInfoView.js';
 import MarkerView from './markerView.js';
+import UserView from './userView.js'
 import Model from '../model/mapModel.js';
+import Route from './routeView.js'
+import MapController from '../controller/mapController.js'
 
 const markers = []
 let activeInfoWindow = null;
 var directionsRenderer = null;
 var directionsService
-var polyline = null
-var polyline2 = null
 var line = []
-var myStyles =[
-    {
-        featureType: "poi",
-        elementType: "labels",
-        stylers: [
-              { visibility: "off" }
-        ]
-    }
-];
-
 var intervalId = null;
 var markerView = null;
 var pMarker = null;
+
 /**
  * @class MapView
  * View for the iWell Application.
@@ -45,41 +38,27 @@ export default class MapView {
      * @param userPosition current location of the user
      */
     initMap(wells, userPosition) {
-        let mapOptions = {
-            zoom: 16,
-            center: userPosition,
-            styles: myStyles 
-        };
-
         let map = new google.maps.Map(document.getElementById('map'),
-            mapOptions);
-     markerView = new MarkerView(map);
+            MapOption(userPosition));
+        markerView = new MarkerView(map);
+
+        pMarker = markerView.createPersonMarker(userPosition)
+
         // add well markers and listeners to open info windows
         for (let i = 0; i < wells.length; i++) {
             let well = wells[i];
             let marker = markerView.createWellMarker(well, i)
             markers.push(marker);
-            this.#addInfoWindowOnClick(marker, map, i, well, null);
+            this.#addInfoWindowOnClick(marker, map, well);
         }
         new markerClusterer.MarkerClusterer({map, markers})
 
-
-        //markerView = new MarkerView(map);
-        pMarker = markerView.createPersonMarker(userPosition)
         this.addLocationButton(map);
 
+        let userView = new UserView()
         intervalId = setInterval(() => {
-            this.updateUserPosition(markerView)
+            userView.updateUserPosition(markerView, pMarker)
         }, 9000)
-    }
-
-    updateUserPosition(markerView) {
-        let modelTest = new Model()
-        modelTest.getUserLocation().then(newUserPosition => { 
-            pMarker.setMap(null)
-            pMarker = markerView.createPersonMarker(newUserPosition)
-            //this.addLocationButton(map, closestMarkerId, newUserPosition);
-        })
     }
 
     calculateAndDisplayDistance(userPosition, targetPosition) {
@@ -95,9 +74,8 @@ export default class MapView {
             }, callback);
     }
 
-    #addInfoWindowOnClick(marker, map, i, well, userPosition) {
+    #addInfoWindowOnClick(marker, map, well) {
         let wellInfoView = new WellInfoView(well)
-        //test.createWellInfo()
         const infowindow = new google.maps.InfoWindow({
             content: wellInfoView.createWellInfo(),
         });
@@ -112,13 +90,13 @@ export default class MapView {
                     let modelTest = new Model()
                     modelTest.getUserLocation().then(userPosition => { 
                         let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()}
-                        this.test1(map, userPosition, targetPosition)
+                        this.updateUserLocation(map, userPosition, targetPosition, false)
                     })
 
                     intervalId = setInterval(() => {
                         modelTest.getUserLocation().then(newUserPosition => {
-                        let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()} 
-                        this.test1(map, newUserPosition, targetPosition)
+                            let targetPosition = {lat: marker.position.lat(), lng: marker.position.lng()} 
+                            this.updateUserLocation(map, newUserPosition, targetPosition, true)
                         })
                     }, 9000)
                 }); 
@@ -129,20 +107,21 @@ export default class MapView {
     addLocationButton(map) {
         document.getElementById("closestMarker").addEventListener("click", () => {
             google.maps.event.trigger(map, 'click');
-            let modelTest = new Model()
+            let model = new Model()
             let wellInfoView = new WellInfoView()
-            //this.test2(map, closestMarkerId, userPosition)
+            let mapController = new MapController()
+            
             clearInterval(intervalId);
-            modelTest.getClosestWell().then(closestId => {
-                modelTest.getUserLocation().then(userPosition => {
+            mapController.getClosestWell().then(closestId => {
+                model.getUserLocation().then(userPosition => {
                     let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
-                    this.test1(map, userPosition, targetPosition)
+                    this.updateUserLocation(map, userPosition, targetPosition, false)
                 })
                 
                 intervalId = setInterval(() => {
-                    modelTest.getUserLocation().then(newUserPosition => {
+                    model.getUserLocation().then(newUserPosition => {
                         let targetPosition = wellInfoView.showClosestWellInfo(closestId, markers) 
-                        this.test1(map, newUserPosition, targetPosition)
+                        this.updateUserLocation(map, newUserPosition, targetPosition, true)
                     })
                 }, 9000)
 
@@ -150,103 +129,33 @@ export default class MapView {
         })
     }
 
-    // User Start Position
-    test1(map, userPosition, targetPosition) {
+    updateUserLocation(map, userPosition, targetPosition, preserveViewport) {
         pMarker.setMap(null)
         pMarker = markerView.createPersonMarker(userPosition)
-        this.setUpRoute(map, targetPosition, userPosition)
+        this.setUpRoute(map, targetPosition, userPosition, preserveViewport)
         this.calculateAndDisplayDistance(userPosition, targetPosition)
     }
 
-    // User New Position (fixed coord), , only for testing
-    test2(map, closestMarkerId) {
-        let modelTest = new Model()
-        modelTest.getUserLocation().then(newUserPosition => { 
-        let wellInfoView = new WellInfoView()
-        let targetPosition = wellInfoView.showClosestWellInfo(closestMarkerId, markers)
-        pMarker.setMap(null)
-        pMarker = markerView.createPersonMarker({lat: 47.3776, lng: 8.5428})
-        this.setUpRoute(map, targetPosition, {lat: 47.3776, lng: 8.5428})
-        this.calculateAndDisplayDistance({lat: 47.3776, lng: 8.5428}, targetPosition)
-    })
-    }
-
-    setUpRoute(map, targetPosition, userPosition) {
+    setUpRoute(map, targetPosition, userPosition, preserveViewport) {
         if(directionsRenderer != null) {
             directionsRenderer.setMap(null);
             directionsRenderer = null;
             var size = line.length;
 
-            for (let i=0; i<size; i++) 
-            {                           
+            for (let i=0; i<size; i++) {                           
                 line[i].setMap(null);
             }
         }
 
-        let rendererOptions = RendererOption();
+        let rendererOptions = RendererOption(preserveViewport);
         directionsRenderer = new google.maps.DirectionsRenderer(rendererOptions);
         directionsService = new google.maps.DirectionsService();
         directionsRenderer.setMap(null);
         directionsRenderer.setMap(map);
-        this.calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map);
+        
+        let routeView = new Route()
+        routeView.calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map, line)
     }
-
-    calculateAndDisplayRoute(userPosition, targetPosition, directionsService, directionsRenderer, map) {
-        directionsService
-          .route({
-            origin: userPosition,
-            destination: targetPosition,
-            travelMode: google.maps.TravelMode.WALKING
-          })
-          .then((response) => {
-            polyline = new google.maps.Polyline({
-                map: map,
-                strokeColor: "red",
-                strokeOpacity: 0,
-                strokeWeight: 4,
-                icons: [{
-                    icon: {
-                      path: google.maps.SymbolPath.CIRCLE,
-                      fillColor: '#C83939',
-                      fillOpacity: 1,
-                      scale: 2,
-                      strokeColor: '#C83939',
-                      strokeOpacity: 1,
-                    },
-                    offset: '0',
-                    repeat: '10px'
-                  }],
-                path: [targetPosition, response.routes[0].legs[0].end_location //des
-                        ]
-                
-            });
-            line.push(polyline)
-            polyline2 = new google.maps.Polyline({
-                map: map,
-                strokeColor: "red",
-                strokeOpacity: 0,
-                strokeWeight: 4,
-                icons: [{
-                    icon: {
-                      path: google.maps.SymbolPath.CIRCLE,
-                      fillColor: '#C83939',
-                      fillOpacity: 1,
-                      scale: 2,
-                      strokeColor: '#C83939',
-                      strokeOpacity: 1,
-                    },
-                    offset: '0',
-                    repeat: '10px'
-                  }],
-                path: [userPosition, response.routes[0].legs[0].start_location
-                        ]
-                
-            });
-            line.push(polyline2)
-            directionsRenderer.setDirections(response);
-          })
-          .catch(() => window.alert("Directions request failed due to " + status));
-      }
 }
 
 function callback(response, status) {

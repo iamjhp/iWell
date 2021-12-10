@@ -12,15 +12,13 @@ class Marker {
     }
 
     createPersonMarker(userPosition) {
-        let test = new google.maps.Marker({
+        let maker = new google.maps.Marker({
             title: 'you',
             position: new google.maps.LatLng(userPosition),
             map: this.map,
             icon: userIcon,
         })
-        //console.log("PersonMarker: " + test.position)
-
-        return test;
+        return maker;
     }
 
     createWellMarker(well, i) {

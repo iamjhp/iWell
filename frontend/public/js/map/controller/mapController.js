@@ -18,14 +18,13 @@ import MapModel from '../model/mapModel.js';
       //this.view.find_closest_Well = this.#find_closest_Well.bind(this);
     }
 
-    /*
-    #find_closest_Well(event) {
-      this.model.getClosestWell(event).then(closestId => {
-        this.view.showClosestWellInfo(closestId);
-      });
-  }
-  */
+    getClosestWell() {
+      let Model = new MapModel()
+      let closestId = Model.getClosestWell()
+      return closestId
+    }
  }
+ export default MapController
 
 const app = new MapController(new MapModel(), new MapView())
 

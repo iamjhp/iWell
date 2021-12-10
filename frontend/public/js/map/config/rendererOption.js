@@ -1,7 +1,7 @@
-export default function RendererOptions() {
+export default function RendererOptions(preserveViewBoolean) {
   
     let rendererOptions = {
-        //preserveViewport: true,
+        preserveViewport: preserveViewBoolean,
         //map: map,
         suppressMarkers: true,
         polylineOptions: {

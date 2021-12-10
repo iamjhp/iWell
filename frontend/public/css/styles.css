@@ -1,82 +1,128 @@
-body {
-    height: 100vh;
+@import url('https://fonts.googleapis.com/css2?family=Courgette&display=swap');
+
+html, body {
+    height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
     font-family: Roboto, sans-serif;
+}
+
+.header {
+    height: 8%;
+    width: 100%;
     display: flex;
-    flex-direction: column;
+    gap: 15%;
+    padding: 0.5vh 0 0.5vh 1vh;
+    margin-bottom: 0.7vh;
+    background: #eee;
 }
 
-button {
-    font-family: Roboto, sans-serif;
-    border-radius: 8px;
-    background: rgb(96, 62, 221);
-    padding: 8px 16px;
-    font-size: 30px;
+.header-leftside {
+    width: 30%;
+    align-items: center;
+    font-family: 'Courgette', cursive;
+    font-size: 2.5vh;
 }
 
-button:hover{
-    background-color: yellow;
+.header-rightside {
+    width: 40%;
 }
 
 .content {
-    flex: 1;
-    display: flex;
+    height: 90%;
+    width: 100%;
 }
 
 .content-left {
-    width: 83%;
-    flex-shrink: 0;
-    padding: 8px;
-    margin: 8px
-  }
+    height: 100%;
+    width: 85%;
+    padding: 0 1vh 1vh 1vh;
+    box-sizing: border-box;
+    float: left;
+}
 
 .content-right {
-    padding: 32px;
-    display: flex;
-    flex-wrap: wrap;
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
+    height: 100%;
+    width: 15%;
+    padding-bottom: 1vh;
+    float: right;
+    box-sizing: border-box;
 }
 
-.right2 {
-    padding: 8px;
+.info-panel {
+    width: 100%;
+    padding-left: 1vh;
+    box-sizing: border-box;
 }
 
-.header,
-.footer {
-  display: flex;
-  gap: 300px;
-  padding: 6px;
-  background: #eee;
+.info-text {
+    color: black;
+    font-size: 1.5vh;
+    box-sizing: border-box;
 }
 
-.cButton {
-  align-content: center;
-  flex-grow: 2;
-  gap: 16px;
-}
-
-#floating-panel {
-    position: absolute;
-    top: 10px;
-    left: 25%;
-    z-index: 5;
-    background-color: #fff;
-    padding: 5px;
-    border: 1px solid #999;
-    text-align: center;
-    font-family: "Roboto", "sans-serif";
-    line-height: 30px;
-    padding-left: 10px;
-  }
-
-  ul {
+ul {
     display: flex;
     list-style: none;
     margin: 0;
     padding: 0;
-    gap: 16px
-  }
+    gap: 3%;
+}
+
+.logo {
+    max-width: 10vmin;
+    max-height: 10vmin;
+}
+
+.button {
+    width: 100%;
+    align-content: center;
+    text-align: center;
+    font-family: Roboto, sans-serif;
+    display: inline-block;
+    padding: .25rem 1.25rem;
+    border-radius: 3rem;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 2.5vh;
+    letter-spacing: .15rem;
+    transition: all .3s;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.button:after {
+     content: '';
+     position: absolute;
+     bottom: 0;
+     left: 0;
+     width: 100%;
+     height: 100%;
+     background-color: #0cf;
+     border-radius: 3rem;
+     z-index: -2;
+ }
+
+.button:before {
+     content: '';
+     position: absolute;
+     bottom: 0;
+     left: 0;
+     width: 0;
+     height: 100%;
+     background-color: #00add8;
+     transition: all .3s;
+     border-radius: 3rem;
+     z-index: -1;
+ }
+
+.button:hover {
+    color: #fff;
+}
+
+.button:hover:before {
+     width: 100%;
+ }
